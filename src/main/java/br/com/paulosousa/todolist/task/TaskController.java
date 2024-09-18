@@ -24,11 +24,11 @@ public class TaskController {
         var currentDate = LocalDateTime.now();
 
         if (currentDate.isAfter(taskModel.getStartAt()) || currentDate.isAfter(taskModel.getEndAt())) {
-            ResponseEntity.status(HttpStatus.BAD_REQUEST).body("The start/end date must be greater than the current date!");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("The start/end date must be greater than the current date!");
         }
 
         if (taskModel.getStartAt().isAfter(taskModel.getEndAt())) {
-            ResponseEntity.status(HttpStatus.BAD_REQUEST).body("The start date must be less than the end date!");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("The start date must be less than the end date!");
         }
 
         var task = this.taskRepository.save(taskModel);
@@ -42,11 +42,21 @@ public class TaskController {
     }
 
     @PutMapping("/{id}")
-    public TaskModel update(@RequestBody TaskModel taskModel, @PathVariable UUID id) {
+    public ResponseEntity update(@RequestBody TaskModel taskModel, @PathVariable UUID id, HttpServletRequest request) {
+        var idUser = request.getAttribute("idUser");
         var task = this.taskRepository.findById(id).orElse(null);
 
-        Utils.copyNonNullProperties(taskModel, task);
+        if (task == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Task not found!");
+        }
 
-        return this.taskRepository.save(task);
+        if (!task.getIdUser().equals(idUser)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Task not found!");
+        }
+
+        Utils.copyNonNullProperties(taskModel, task);
+        var taskUpdated = this.taskRepository.save(task);
+
+        return ResponseEntity.status(HttpStatus.OK).body(taskUpdated);
     }
 }
